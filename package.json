@@ -1,0 +1,20 @@
+{
+  "name": "gym-backend",
+  "version": "1.0.0",
+  "description": "gym backend",
+  "homepage": "https://github.com/razace50/gym-backend#readme",
+  "bugs": {
+    "url": "https://github.com/razace50/gym-backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/razace50/gym-backend.git"
+  },
+  "license": "ISC",
+  "author": "Rajesh Sunar",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm start"
+  }
+}
