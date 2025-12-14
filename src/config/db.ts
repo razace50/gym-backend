@@ -9,4 +9,7 @@ const pool = new Pool({
     password: process.env.DB_PASS,
     port: Number(process.env.DB_PORT),
 });
+pool.on("connect", () =>{
+    console.log("Connection pool established with Database");
+});
 export default pool;
