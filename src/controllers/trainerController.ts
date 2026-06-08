@@ -2,8 +2,7 @@ import { Response } from "express";
 import bcrypt from "bcrypt";
 import prisma from "../config/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
-import { Role } from "@prisma/client";
-
+import { Role } from "../generated/prisma";
 export const getTrainers = async (req: AuthRequest, res: Response) => {
   try {
     const trainers = await prisma.trainer.findMany({

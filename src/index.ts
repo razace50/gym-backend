@@ -5,9 +5,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import memberRoutes from "./routes/memberRoutes";
 import trainerRoutes from "./routes/trainerRoutes";
-import dashboardRoutes from "./routes/dashboardRoutes";
 import membershipRoutes from "./routes/membershipRoutes";
-import paymentRoutes from "./routes/paymentRoutes";
 import userRoutes from "./routes/userRoutes";
 
 
@@ -25,9 +23,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/api/trainers", trainerRoutes);
-app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/memberships", membershipRoutes);
-app.use("/api/payments", paymentRoutes);
 app.use("/api/users", userRoutes);
 
 const port = process.env.PORT || 5000;
