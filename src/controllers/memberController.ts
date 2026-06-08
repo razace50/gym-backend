@@ -3,6 +3,9 @@ import { Response } from "express";
 import bcrypt from "bcrypt";
 import prisma from "../config/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
+import {Role} from "@prisma/client";
+
+
 
 export const getMembers = async (req: AuthRequest, res: Response) => {
   const members = await prisma.member.findMany({
@@ -47,6 +50,14 @@ export const createMember = async (req: AuthRequest, res: Response) => {
       trainerId,
     } = req.body;
 
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const member = await prisma.member.create({
@@ -54,26 +65,49 @@ export const createMember = async (req: AuthRequest, res: Response) => {
         age: age ? Number(age) : null,
         gender,
         address,
-        membershipId: membershipId ? Number(membershipId) : null,
-        trainerId: trainerId ? Number(trainerId) : null,
+
         user: {
           create: {
             fullName,
             email,
             phone,
             password: hashedPassword,
-            role: "MEMBER",
+            role: Role.MEMBER,
           },
         },
+
+        membership: membershipId
+          ? {
+              connect: {
+                id: Number(membershipId),
+              },
+            }
+          : undefined,
+
+        trainer: trainerId
+          ? {
+              connect: {
+                id: Number(trainerId),
+              },
+            }
+          : undefined,
       },
       include: {
         user: true,
         membership: true,
+        trainer: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
-    res.status(201).json(member);
+    return res.status(201).json(member);
   } catch (error) {
-    res.status(500).json({ message: "Failed to create member", error });
+    return res.status(500).json({
+      message: "Failed to create member",
+      error,
+    });
   }
 };
