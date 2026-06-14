@@ -9,6 +9,7 @@ import membershipRoutes from "./routes/membershipRoutes";
 import userRoutes from "./routes/userRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
+import attendanceRoutes from "./routes/attendanceRoutes";
 
 
 
@@ -29,7 +30,7 @@ app.use("/api/memberships", membershipRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/payments", paymentRoutes);
-
+app.use("/api/attendance", attendanceRoutes);
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

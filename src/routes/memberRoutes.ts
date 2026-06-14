@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { createMember, getMembers } from "../controllers/memberController";
+import {
+  createMember,
+  getMembers,
+  getMemberById,
+  updateMember,
+  deleteMember,
+} from "../controllers/memberController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
 
@@ -12,11 +18,32 @@ router.get(
   getMembers
 );
 
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST", "TRAINER", "MEMBER"),
+  getMemberById
+);
+
 router.post(
   "/",
   protect,
   authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
   createMember
+);
+
+router.patch(
+  "/:id",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
+  updateMember
+);
+
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  deleteMember
 );
 
 export default router;
