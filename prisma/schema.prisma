@@ -32,26 +32,31 @@ model User {
 }
 
 model Member {
-  id              Int       @id @default(autoincrement())
-  userId          Int       @unique
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique
 
-  age             Int?
-  gender          String?
-  address         String?
+  age               Int?
+  gender            String?
+  address           String?
 
-  membershipId    Int?
-  trainerId       Int?
+  membershipId      Int?
+  trainerId         Int?
 
-  joinDate        DateTime @default(now())
+  joinDate          DateTime @default(now())
 
-  user            User @relation(fields: [userId], references: [id])
+  membershipStart   DateTime?
+  membershipEnd     DateTime?
 
-  membership      Membership? @relation(fields: [membershipId], references: [id])
+  status            String   @default("ACTIVE")
 
-  trainer         Trainer? @relation(fields: [trainerId], references: [id])
+  user              User @relation(fields: [userId], references: [id])
 
-  payments        Payment[]
-  attendance      Attendance[]
+  membership        Membership? @relation(fields: [membershipId], references: [id])
+
+  trainer           Trainer? @relation(fields: [trainerId], references: [id])
+
+  payments          Payment[]
+  attendance        Attendance[]
 }
 
 model Trainer {

@@ -5,6 +5,8 @@ import {
   getMemberById,
   updateMember,
   deleteMember,
+  renewMembership,
+  updateMemberStatus,
 } from "../controllers/memberController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
@@ -37,6 +39,20 @@ router.patch(
   protect,
   authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
   updateMember
+);
+
+router.patch(
+  "/:id/renew",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
+  renewMembership
+);
+
+router.patch(
+  "/:id/status",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
+  updateMemberStatus
 );
 
 router.delete(

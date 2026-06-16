@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { createTrainer, getTrainers } from "../controllers/trainerController";
+import {
+  createTrainer,
+  getTrainers,
+  updateTrainer,
+  deleteTrainer,
+} from "../controllers/trainerController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
 
@@ -17,6 +22,20 @@ router.post(
   protect,
   authorizeRoles("SUPER_ADMIN", "ADMIN"),
   createTrainer
+);
+
+router.patch(
+  "/:id",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  updateTrainer
+);
+
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("SUPER_ADMIN"),
+  deleteTrainer
 );
 
 export default router;

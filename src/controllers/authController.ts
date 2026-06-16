@@ -6,17 +6,22 @@ import { Role } from "../generated/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 
 const generateToken = (user: { id: number; email: string; role: string }) => {
-  return jwt.sign(user, process.env.JWT_SECRET as string, {
-    expiresIn: "7d",
-  });
+  return jwt.sign(user, process.env.JWT_SECRET as string, { expiresIn: "7d" });
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { fullName, email, password, phone, role } = req.body;
+    const { fullName, email, password, phone, role, specialization, shift } = req.body;
 
     if (!fullName || !email || !password || !role) {
       res.status(400).json({ message: "fullName, email, password and role are required" });
+      return;
+    }
+
+    const allowedRoles = [Role.SUPER_ADMIN, Role.ADMIN, Role.RECEPTIONIST, Role.TRAINER];
+
+    if (!allowedRoles.includes(role)) {
+      res.status(400).json({ message: "Invalid staff role" });
       return;
     }
 
@@ -34,8 +39,24 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         fullName,
         email,
         password: hashedPassword,
-        phone,
+        phone: phone || null,
         role,
+        trainer:
+          role === Role.TRAINER
+            ? {
+                create: {
+                  specialization: specialization || null,
+                },
+              }
+            : undefined,
+        receptionist:
+          role === Role.RECEPTIONIST
+            ? {
+                create: {
+                  shift: shift || null,
+                },
+              }
+            : undefined,
       },
       select: {
         id: true,
@@ -44,13 +65,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         role: true,
         phone: true,
         createdAt: true,
+        trainer: true,
+        receptionist: true,
       },
     });
 
-    res.status(201).json({
-      message: "User registered successfully",
-      user,
-    });
+    res.status(201).json({ message: "User registered successfully", user });
   } catch (error) {
     res.status(500).json({ message: "Registration failed", error });
   }
@@ -76,11 +96,12 @@ export const signupMember = async (req: Request, res: Response): Promise<void> =
 
     const member = await prisma.member.create({
       data: {
+        status: "ACTIVE",
         user: {
           create: {
             fullName,
             email,
-            phone,
+            phone: phone || null,
             password: hashedPassword,
             role: Role.MEMBER,
           },
@@ -99,10 +120,7 @@ export const signupMember = async (req: Request, res: Response): Promise<void> =
       },
     });
 
-    res.status(201).json({
-      message: "Member signup successful",
-      member,
-    });
+    res.status(201).json({ message: "Member signup successful", member });
   } catch (error) {
     res.status(500).json({ message: "Signup failed", error });
   }
@@ -131,11 +149,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    const token = generateToken({ id: user.id, email: user.email, role: user.role });
 
     res.json({
       message: "Login successful",
@@ -171,6 +185,11 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
         createdAt: true,
       },
     });
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
 
     res.json(user);
   } catch (error) {
