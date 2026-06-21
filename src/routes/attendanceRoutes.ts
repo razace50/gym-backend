@@ -6,6 +6,8 @@ import {
 } from "../controllers/attendanceController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
+import { validateBody } from "../middlewares/validate";
+import { checkInSchema } from "../validations/gymValidation";
 
 const router = Router();
 
@@ -20,6 +22,7 @@ router.post(
   "/check-in",
   protect,
   authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
+  validateBody(checkInSchema),
   checkIn
 );
 

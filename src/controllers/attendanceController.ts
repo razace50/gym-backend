@@ -31,6 +31,20 @@ export const checkIn = async (req: AuthRequest, res: Response) => {
   try {
     const { memberId } = req.body;
 
+    const member = await prisma.member.findUnique({
+      where: { id: Number(memberId) },
+    });
+
+    if (!member) {
+      return res.status(404).json({ message: "Member not found" });
+    }
+
+    if (member.status !== "ACTIVE") {
+      return res.status(400).json({
+        message: "Only active members can check in",
+      });
+    }
+
     const alreadyCheckedIn = await prisma.attendance.findFirst({
       where: {
         memberId: Number(memberId),
@@ -57,6 +71,22 @@ export const checkIn = async (req: AuthRequest, res: Response) => {
 export const checkOut = async (req: AuthRequest, res: Response) => {
   try {
     const id = Number(req.params.id);
+
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ message: "Invalid attendance id" });
+    }
+
+    const existingAttendance = await prisma.attendance.findUnique({
+      where: { id },
+    });
+
+    if (!existingAttendance) {
+      return res.status(404).json({ message: "Attendance record not found" });
+    }
+
+    if (existingAttendance.checkOut) {
+      return res.status(400).json({ message: "Member already checked out" });
+    }
 
     const attendance = await prisma.attendance.update({
       where: { id },

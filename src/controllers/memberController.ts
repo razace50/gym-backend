@@ -6,9 +6,24 @@ import { Role } from "../generated/prisma";
 
 const validMemberStatuses = ["ACTIVE", "INACTIVE", "SUSPENDED", "EXPIRED"];
 
-export const getMembers = async (_req: AuthRequest, res: Response) => {
+export const getMembers = async (req: AuthRequest, res: Response) => {
   try {
+    let whereCondition = {};
+
+    if (req.user?.role === "TRAINER") {
+      const trainer = await prisma.trainer.findUnique({
+        where: { userId: req.user.id },
+      });
+
+      if (!trainer) {
+        return res.status(403).json({ message: "Trainer profile not found" });
+      }
+
+      whereCondition = { trainerId: trainer.id };
+    }
+
     const members = await prisma.member.findMany({
+      where: whereCondition,
       orderBy: { joinDate: "desc" },
       include: {
         user: {
@@ -63,6 +78,24 @@ export const getMemberById = async (req: AuthRequest, res: Response) => {
 
     if (!member) {
       return res.status(404).json({ message: "Member not found" });
+    }
+
+    if (req.user?.role === "MEMBER" && member.userId !== req.user.id) {
+      return res.status(403).json({
+        message: "Members can only view their own profile",
+      });
+    }
+
+    if (req.user?.role === "TRAINER") {
+      const trainer = await prisma.trainer.findUnique({
+        where: { userId: req.user.id },
+      });
+
+      if (!trainer || member.trainerId !== trainer.id) {
+        return res.status(403).json({
+          message: "Trainers can only view assigned members",
+        });
+      }
     }
 
     return res.json(member);

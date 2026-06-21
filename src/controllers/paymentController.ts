@@ -78,6 +78,27 @@ export const getPaymentsByMember = async (
   try {
     const memberId = Number(req.params.memberId);
 
+    if (Number.isNaN(memberId)) {
+      res.status(400).json({ message: "Invalid member id" });
+      return;
+    }
+
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+    });
+
+    if (!member) {
+      res.status(404).json({ message: "Member not found" });
+      return;
+    }
+
+    if (req.user?.role === "MEMBER" && member.userId !== req.user.id) {
+      res.status(403).json({
+        message: "Members can only view their own payments",
+      });
+      return;
+    }
+
     const payments = await prisma.payment.findMany({
       where: { memberId },
       orderBy: { createdAt: "desc" },
@@ -111,20 +132,7 @@ export const createPayment = async (
   try {
     const { memberId, amount, status } = req.body;
 
-    if (!memberId || !amount) {
-      res.status(400).json({ message: "memberId and amount are required" });
-      return;
-    }
-
     const finalStatus = status || "PENDING";
-
-    if (!allowedStatuses.includes(finalStatus)) {
-      res.status(400).json({
-        message: "Invalid payment status",
-        allowedStatuses,
-      });
-      return;
-    }
 
     const member = await prisma.member.findUnique({
       where: { id: Number(memberId) },
