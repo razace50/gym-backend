@@ -26,9 +26,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  member       Member?
-  trainer      Trainer?
-  receptionist Receptionist?
+  member             Member?
+  trainer            Trainer?
+  receptionist       Receptionist?
+  renewedMemberships MembershipRenewal[]
 }
 
 model Member {
@@ -86,8 +87,10 @@ model Membership {
   duration Int
   price    Float
 
-  members  Member[]
-  renewals MembershipRenewal[]
+  members     Member[]
+  renewals    MembershipRenewal[]
+  oldRenewals MembershipRenewal[] @relation("OldMembershipRenewals")
+  newRenewals MembershipRenewal[] @relation("NewMembershipRenewals")
 }
 
 model Payment {
@@ -114,26 +117,28 @@ model Attendance {
 }
 
 model MembershipRenewal {
-  id              Int       @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   memberId        Int
   oldMembershipId Int?
   newMembershipId Int
 
-  oldEndDate      DateTime?
-  newEndDate      DateTime
+  oldEndDate DateTime?
+  newEndDate DateTime
 
-  amount          Float?
-  renewedById     Int?
+  amount      Float?
+  renewedById Int?
 
-  createdAt       DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  oldMembership   Membership? @relation("OldMembershipRenewals", fields: [oldMembershipId], references: [id])
-  newMembership   Membership  @relation("NewMembershipRenewals", fields: [newMembershipId], references: [id])
+  oldMembership Membership? @relation("OldMembershipRenewals", fields: [oldMembershipId], references: [id])
+  newMembership Membership  @relation("NewMembershipRenewals", fields: [newMembershipId], references: [id])
 
-  renewedBy       User?     @relation(fields: [renewedById], references: [id])
+  renewedBy    User?       @relation(fields: [renewedById], references: [id])
+  membership   Membership? @relation(fields: [membershipId], references: [id])
+  membershipId Int?
 
   @@index([memberId])
   @@index([oldMembershipId])

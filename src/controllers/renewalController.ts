@@ -48,6 +48,7 @@ export const renewMemberMembership = async (
     const renewal = await prisma.membershipRenewal.create({
       data: {
         memberId,
+
         oldMembershipId: member.membershipId,
         newMembershipId: newMembership.id,
         oldEndDate: member.membershipEnd,
@@ -81,14 +82,16 @@ export const getMemberRenewalHistory = async (
       where: { memberId },
       orderBy: { createdAt: "desc" },
       include: {
-        renewedBy: {
-          select: {
-            fullName: true,
-            email: true,
-            role: true,
-          },
-        },
-      },
+  renewedBy: {
+    select: {
+      fullName: true,
+      email: true,
+      role: true,
+    },
+  },
+  oldMembership: true,
+  newMembership: true,
+},
     });
 
     return res.json(renewals);
