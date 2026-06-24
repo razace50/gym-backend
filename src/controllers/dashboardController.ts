@@ -31,6 +31,10 @@ export const getDashboardStats = async (
       expiredMembers,
       inactiveMembers,
       totalRevenue,
+      recentMembers,
+      recentPayments,
+      expiringMembers,
+      todayCheckIns,
     ] = await Promise.all([
       prisma.member.count(),
 
@@ -86,6 +90,87 @@ export const getDashboardStats = async (
           amount: true,
         },
       }),
+
+      prisma.member.findMany({
+        take: 5,
+        orderBy: {
+          joinDate: "desc",
+        },
+        include: {
+          user: {
+            select: {
+              fullName: true,
+              email: true,
+              phone: true,
+            },
+          },
+          membership: true,
+        },
+      }),
+
+      prisma.payment.findMany({
+        take: 5,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          member: {
+            include: {
+              user: {
+                select: {
+                  fullName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+
+      prisma.member.findMany({
+        take: 5,
+        where: {
+          membershipEnd: {
+            gte: today,
+            lte: sevenDays,
+          },
+        },
+        orderBy: {
+          membershipEnd: "asc",
+        },
+        include: {
+          user: {
+            select: {
+              fullName: true,
+              email: true,
+              phone: true,
+            },
+          },
+          membership: true,
+        },
+      }),
+
+      prisma.attendance.findMany({
+        take: 5,
+        where: {
+          checkOut: null,
+        },
+        orderBy: {
+          checkIn: "desc",
+        },
+        include: {
+          member: {
+            include: {
+              user: {
+                select: {
+                  fullName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
     res.json({
@@ -98,6 +183,10 @@ export const getDashboardStats = async (
       expiredMembers,
       inactiveMembers,
       totalRevenue: totalRevenue._sum.amount || 0,
+      recentMembers,
+      recentPayments,
+      expiringMembers,
+      todayCheckIns,
     });
   } catch (error) {
     res.status(500).json({

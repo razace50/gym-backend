@@ -1,10 +1,29 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import prisma from "../config/prisma";
-import { AuthRequest } from "../middlewares/authMiddleware";
 
-export const getAttendance = async (_req: AuthRequest, res: Response) => {
+export const getAttendance = async (req: Request, res: Response) => {
   try {
+    const { date, memberId } = req.query;
+
+    const where: any = {};
+
+    if (memberId) {
+      where.memberId = Number(memberId);
+    }
+
+    if (date) {
+      const start = new Date(date as string);
+      const end = new Date(date as string);
+      end.setDate(end.getDate() + 1);
+
+      where.checkIn = {
+        gte: start,
+        lt: end,
+      };
+    }
+
     const attendance = await prisma.attendance.findMany({
+      where,
       orderBy: { checkIn: "desc" },
       include: {
         member: {
@@ -23,73 +42,44 @@ export const getAttendance = async (_req: AuthRequest, res: Response) => {
 
     res.json(attendance);
   } catch (error) {
-    res.status(500).json({ message: "Failed to get attendance", error });
+    res.status(500).json({ message: "Failed to fetch attendance", error });
   }
 };
 
-export const checkIn = async (req: AuthRequest, res: Response) => {
+export const checkIn = async (req: Request, res: Response) => {
   try {
     const { memberId } = req.body;
 
-    const member = await prisma.member.findUnique({
-      where: { id: Number(memberId) },
-    });
-
-    if (!member) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    if (member.status !== "ACTIVE") {
-      return res.status(400).json({
-        message: "Only active members can check in",
-      });
-    }
-
-    const alreadyCheckedIn = await prisma.attendance.findFirst({
+    const existing = await prisma.attendance.findFirst({
       where: {
         memberId: Number(memberId),
         checkOut: null,
       },
     });
 
-    if (alreadyCheckedIn) {
+    if (existing) {
       return res.status(400).json({ message: "Member already checked in" });
     }
 
     const attendance = await prisma.attendance.create({
       data: {
         memberId: Number(memberId),
+        checkIn: new Date(),
       },
     });
 
     res.status(201).json(attendance);
   } catch (error) {
-    res.status(500).json({ message: "Check-in failed", error });
+    res.status(500).json({ message: "Failed to check in", error });
   }
 };
 
-export const checkOut = async (req: AuthRequest, res: Response) => {
+export const checkOut = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-
-    if (Number.isNaN(id)) {
-      return res.status(400).json({ message: "Invalid attendance id" });
-    }
-
-    const existingAttendance = await prisma.attendance.findUnique({
-      where: { id },
-    });
-
-    if (!existingAttendance) {
-      return res.status(404).json({ message: "Attendance record not found" });
-    }
-
-    if (existingAttendance.checkOut) {
-      return res.status(400).json({ message: "Member already checked out" });
-    }
+    const { id } = req.params;
 
     const attendance = await prisma.attendance.update({
-      where: { id },
+      where: { id: Number(id) },
       data: {
         checkOut: new Date(),
       },
@@ -97,6 +87,6 @@ export const checkOut = async (req: AuthRequest, res: Response) => {
 
     res.json(attendance);
   } catch (error) {
-    res.status(500).json({ message: "Check-out failed", error });
+    res.status(500).json({ message: "Failed to check out", error });
   }
 };

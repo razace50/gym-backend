@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { getDashboardStats } from "../controllers/dashboardController";
+import { getTrainerDashboard } from "../controllers/trainerDashboardController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
 
 const router = Router();
 
 router.get(
-  "/stats",
+  "/",
   protect,
-  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST", "TRAINER", "MEMBER"),
-  getDashboardStats
+  authorizeRoles("TRAINER"),
+  getTrainerDashboard
 );
 
 export default router;

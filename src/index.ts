@@ -10,7 +10,10 @@ import userRoutes from "./routes/userRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 import attendanceRoutes from "./routes/attendanceRoutes";
-
+import trainerDashboardRoutes from "./routes/trainerDashboardRoutes";
+import memberDashboardRoutes from "./routes/memberDashboardRoutes";
+import renewalRoutes from "./routes/renewalRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 
 dotenv.config();
@@ -19,10 +22,13 @@ const app = express();
 app.use(express.json());
 app.use(
     cors({
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        origin: process.env.FRONTEND_URL || "http://localhost:5173",
         credentials: true,
     })
 );
+app.get("/", (_req, res) => {
+    res.send("Gym Management api is running");
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/api/trainers", trainerRoutes);
@@ -31,6 +37,10 @@ app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/trainer-dashboard", trainerDashboardRoutes);
+app.use("/api/member-dashboard", memberDashboardRoutes);
+app.use("/api/renewals", renewalRoutes);
+app.use("/api/notifications", notificationRoutes);
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

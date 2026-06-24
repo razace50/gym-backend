@@ -4,10 +4,9 @@ import {
   checkIn,
   checkOut,
 } from "../controllers/attendanceController";
+
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
-import { validateBody } from "../middlewares/validate";
-import { checkInSchema } from "../validations/gymValidation";
 
 const router = Router();
 
@@ -21,15 +20,14 @@ router.get(
 router.post(
   "/check-in",
   protect,
-  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
-  validateBody(checkInSchema),
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST", "TRAINER"),
   checkIn
 );
 
 router.patch(
   "/:id/check-out",
   protect,
-  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST"),
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "RECEPTIONIST", "TRAINER"),
   checkOut
 );
 
