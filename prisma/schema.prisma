@@ -145,3 +145,17 @@ model MembershipRenewal {
   @@index([newMembershipId])
   @@index([renewedById])
 }
+
+model GymSetting {
+  id  Int  @id @default(autoincrement())
+  gymName  String
+  logoUrl String?
+  logoFile String?
+  phone   String?
+  email   String?
+  address  String?
+  currency String  @default("Nrs")
+  openingHours String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}

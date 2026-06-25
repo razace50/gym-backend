@@ -14,6 +14,7 @@ import trainerDashboardRoutes from "./routes/trainerDashboardRoutes";
 import memberDashboardRoutes from "./routes/memberDashboardRoutes";
 import renewalRoutes from "./routes/renewalRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
+import settingsRoutes from "./routes/settingsRoutes";
 
 
 dotenv.config();
@@ -41,6 +42,7 @@ app.use("/api/trainer-dashboard", trainerDashboardRoutes);
 app.use("/api/member-dashboard", memberDashboardRoutes);
 app.use("/api/renewals", renewalRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/settings", settingsRoutes);
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
