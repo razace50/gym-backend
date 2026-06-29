@@ -5,6 +5,7 @@ import {
 } from "../controllers/settingsController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
+import { uploadLogo } from "../middlewares/uploadLogo";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.patch(
   "/",
   protect,
   authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  uploadLogo.single("logoFile"),
   updateGymSettings
 );
 

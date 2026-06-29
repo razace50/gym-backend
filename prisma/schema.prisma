@@ -30,6 +30,11 @@ model User {
   trainer            Trainer?
   receptionist       Receptionist?
   renewedMemberships MembershipRenewal[]
+
+  createdMembers   Member[]      @relation("MemberCreatedBy")
+  updatedMembers   Member[]      @relation("MemberUpdatedBy")
+  collectedPayments Payment[]     @relation("PaymentCollectedBy")
+  activityLogs     ActivityLog[] @relation("ActivityPerformedBy")
 }
 
 model Member {
@@ -50,15 +55,24 @@ model Member {
 
   status String @default("ACTIVE")
 
-  user User @relation(fields: [userId], references: [id])
+  createdById Int?
+  updatedById Int?
 
+  user       User        @relation(fields: [userId], references: [id])
   membership Membership? @relation(fields: [membershipId], references: [id])
+  trainer    Trainer?    @relation(fields: [trainerId], references: [id])
 
-  trainer Trainer? @relation(fields: [trainerId], references: [id])
+  createdBy User? @relation("MemberCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("MemberUpdatedBy", fields: [updatedById], references: [id])
 
-  payments   Payment[]
-  attendance Attendance[]
-  renewals   MembershipRenewal[]
+  payments         Payment[]
+  attendance       Attendance[]
+  renewals         MembershipRenewal[]
+  WorkoutPlans     WorkoutPlan[]
+  progressRecords  ProgressRecord[]
+
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 model Trainer {
@@ -69,7 +83,9 @@ model Trainer {
 
   user User @relation(fields: [userId], references: [id])
 
-  members Member[]
+  members         Member[]
+  WorkoutPlans    WorkoutPlan[]
+  progressRecords ProgressRecord[]
 }
 
 model Receptionist {
@@ -88,7 +104,6 @@ model Membership {
   price    Float
 
   members     Member[]
-  renewals    MembershipRenewal[]
   oldRenewals MembershipRenewal[] @relation("OldMembershipRenewals")
   newRenewals MembershipRenewal[] @relation("NewMembershipRenewals")
 }
@@ -100,9 +115,15 @@ model Payment {
   amount   Float
   status   String
 
+  collectedById Int?
+
   createdAt DateTime @default(now())
 
-  member Member @relation(fields: [memberId], references: [id])
+  member      Member @relation(fields: [memberId], references: [id])
+  collectedBy User?  @relation("PaymentCollectedBy", fields: [collectedById], references: [id])
+
+  @@index([memberId])
+  @@index([collectedById])
 }
 
 model Attendance {
@@ -136,9 +157,7 @@ model MembershipRenewal {
   oldMembership Membership? @relation("OldMembershipRenewals", fields: [oldMembershipId], references: [id])
   newMembership Membership  @relation("NewMembershipRenewals", fields: [newMembershipId], references: [id])
 
-  renewedBy    User?       @relation(fields: [renewedById], references: [id])
-  membership   Membership? @relation(fields: [membershipId], references: [id])
-  membershipId Int?
+  renewedBy User? @relation(fields: [renewedById], references: [id])
 
   @@index([memberId])
   @@index([oldMembershipId])
@@ -147,15 +166,78 @@ model MembershipRenewal {
 }
 
 model GymSetting {
-  id  Int  @id @default(autoincrement())
-  gymName  String
-  logoUrl String?
-  logoFile String?
-  phone   String?
-  email   String?
-  address  String?
-  currency String  @default("Nrs")
+  id           Int      @id @default(autoincrement())
+  gymName      String
+  logoUrl      String?
+  logoFile     String?
+  phone        String?
+  email        String?
+  address      String?
+  currency     String   @default("Nrs")
   openingHours String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model WorkoutPlan {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  exercises   String
+  notes       String?
+  memberId    Int
+  trainerId   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  member  Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trainer Trainer? @relation(fields: [trainerId], references: [id])
+}
+
+model ProgressRecord {
+  id           Int      @id @default(autoincrement())
+  memberId     Int
+  trainerId    Int?
+  weight       Float?
+  height       Float?
+  chest        Float?
+  waist        Float?
+  arms         Float?
+  notes        String?
+  recordedDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  member  Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trainer Trainer? @relation(fields: [trainerId], references: [id])
+
+  @@index([memberId])
+  @@index([trainerId])
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String
+  amount      Float
+  expenseDate DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ActivityLog {
+  id            Int      @id @default(autoincrement())
+  action        String
+  entityType    String
+  entityId      Int?
+  description   String
+  performedById Int?
+  createdAt     DateTime @default(now())
+
+  performedBy User? @relation("ActivityPerformedBy", fields: [performedById], references: [id])
+
+  @@index([performedById])
+  @@index([entityType])
+  @@index([createdAt])
 }

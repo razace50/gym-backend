@@ -26,13 +26,18 @@ export const updateGymSettings = async (req: AuthRequest, res: Response) => {
     const { gymName, logoUrl, phone, email, address, currency, openingHours } =
       req.body;
 
+    const uploadedLogo = req.file
+      ? `/uploads/logos/${req.file.filename}`
+      : undefined;
+
     let settings = await prisma.gymSetting.findFirst();
 
     if (!settings) {
       settings = await prisma.gymSetting.create({
         data: {
           gymName,
-          logoUrl,
+          logoUrl: logoUrl || null,
+          logoFile: uploadedLogo || null,
           phone,
           email,
           address,
@@ -45,7 +50,8 @@ export const updateGymSettings = async (req: AuthRequest, res: Response) => {
         where: { id: settings.id },
         data: {
           gymName,
-          logoUrl,
+          logoUrl: logoUrl || null,
+          logoFile: uploadedLogo || settings.logoFile,
           phone,
           email,
           address,

@@ -3,8 +3,55 @@ import bcrypt from "bcrypt";
 import prisma from "../config/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { Role } from "../generated/prisma";
+import { logActivity } from "../utils/activityLogger";
 
 const validMemberStatuses = ["ACTIVE", "INACTIVE", "SUSPENDED", "EXPIRED"];
+
+const userSelect = {
+  id: true,
+  fullName: true,
+  email: true,
+  phone: true,
+  role: true,
+};
+
+const addedBySelect = {
+  id: true,
+  fullName: true,
+  email: true,
+  role: true,
+};
+
+const addMonths = (date: Date, months: number) => {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() + months);
+  return newDate;
+};
+
+const getMemberInclude = {
+  user: {
+    select: userSelect,
+  },
+  membership: true,
+  trainer: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+        },
+      },
+    },
+  },
+  createdBy: {
+    select: addedBySelect,
+  },
+  updatedBy: {
+    select: addedBySelect,
+  },
+};
 
 export const getMembers = async (req: AuthRequest, res: Response) => {
   try {
@@ -25,30 +72,7 @@ export const getMembers = async (req: AuthRequest, res: Response) => {
     const members = await prisma.member.findMany({
       where: whereCondition,
       orderBy: { joinDate: "desc" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            phone: true,
-            role: true,
-          },
-        },
-        membership: true,
-        trainer: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                phone: true,
-              },
-            },
-          },
-        },
-      },
+      include: getMemberInclude,
     });
 
     return res.json(members);
@@ -68,9 +92,7 @@ export const getMemberById = async (req: AuthRequest, res: Response) => {
     const member = await prisma.member.findUnique({
       where: { id },
       include: {
-        user: true,
-        membership: true,
-        trainer: { include: { user: true } },
+        ...getMemberInclude,
         payments: { orderBy: { createdAt: "desc" } },
         attendance: { orderBy: { checkIn: "desc" } },
       },
@@ -143,8 +165,7 @@ export const createMember = async (req: AuthRequest, res: Response) => {
       }
 
       membershipStart = new Date();
-      membershipEnd = new Date();
-      membershipEnd.setDate(membershipEnd.getDate() + selectedMembership.duration);
+      membershipEnd = addMonths(membershipStart, selectedMembership.duration);
     }
 
     if (trainerId) {
@@ -167,6 +188,9 @@ export const createMember = async (req: AuthRequest, res: Response) => {
         membershipStart,
         membershipEnd,
         status: "ACTIVE",
+        createdBy: req.user?.id
+  ? { connect: { id: req.user.id } }
+  : undefined,
         user: {
           create: {
             fullName,
@@ -181,11 +205,15 @@ export const createMember = async (req: AuthRequest, res: Response) => {
           : undefined,
         trainer: trainerId ? { connect: { id: Number(trainerId) } } : undefined,
       },
-      include: {
-        user: true,
-        membership: true,
-        trainer: { include: { user: true } },
-      },
+      include: getMemberInclude,
+    });
+
+    await logActivity({
+      action: "CREATE",
+      entityType: "MEMBER",
+      entityId: member.id,
+      description: `${req.user?.email || "System"} added member ${member.user.fullName}`,
+      performedById: req.user?.id,
     });
 
     return res.status(201).json(member);
@@ -235,8 +263,7 @@ export const updateMember = async (req: AuthRequest, res: Response) => {
       }
 
       membershipStart = new Date();
-      membershipEnd = new Date();
-      membershipEnd.setDate(membershipEnd.getDate() + selectedMembership.duration);
+      membershipEnd = addMonths(membershipStart, selectedMembership.duration);
     }
 
     if (trainerId) {
@@ -257,10 +284,15 @@ export const updateMember = async (req: AuthRequest, res: Response) => {
         address: address || null,
         membershipStart,
         membershipEnd,
+        createdBy: req.user?.id
+  ? { connect: { id: req.user.id } }
+  : undefined,
         membership: membershipId
           ? { connect: { id: Number(membershipId) } }
           : { disconnect: true },
-        trainer: trainerId ? { connect: { id: Number(trainerId) } } : { disconnect: true },
+        trainer: trainerId
+          ? { connect: { id: Number(trainerId) } }
+          : { disconnect: true },
         user: {
           update: {
             fullName,
@@ -269,11 +301,15 @@ export const updateMember = async (req: AuthRequest, res: Response) => {
           },
         },
       },
-      include: {
-        user: true,
-        membership: true,
-        trainer: { include: { user: true } },
-      },
+      include: getMemberInclude,
+    });
+
+    await logActivity({
+      action: "UPDATE",
+      entityType: "MEMBER",
+      entityId: member.id,
+      description: `${req.user?.email || "System"} updated member ${member.user.fullName}`,
+      performedById: req.user?.id,
     });
 
     return res.json(member);
@@ -290,7 +326,10 @@ export const deleteMember = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Invalid member id" });
     }
 
-    const member = await prisma.member.findUnique({ where: { id } });
+    const member = await prisma.member.findUnique({
+      where: { id },
+      include: { user: true },
+    });
 
     if (!member) {
       return res.status(404).json({ message: "Member not found" });
@@ -300,6 +339,14 @@ export const deleteMember = async (req: AuthRequest, res: Response) => {
     await prisma.attendance.deleteMany({ where: { memberId: id } });
     await prisma.member.delete({ where: { id } });
     await prisma.user.delete({ where: { id: member.userId } });
+
+    await logActivity({
+      action: "DELETE",
+      entityType: "MEMBER",
+      entityId: id,
+      description: `${req.user?.email || "System"} deleted member ${member.user.fullName}`,
+      performedById: req.user?.id,
+    });
 
     return res.json({ message: "Member deleted successfully" });
   } catch (error) {
@@ -317,7 +364,7 @@ export const renewMembership = async (req: AuthRequest, res: Response) => {
 
     const member = await prisma.member.findUnique({
       where: { id: memberId },
-      include: { membership: true },
+      include: { membership: true, user: true },
     });
 
     if (!member) {
@@ -329,8 +376,7 @@ export const renewMembership = async (req: AuthRequest, res: Response) => {
     }
 
     const membershipStart = new Date();
-    const membershipEnd = new Date();
-    membershipEnd.setDate(membershipEnd.getDate() + member.membership.duration);
+    const membershipEnd = addMonths(membershipStart, member.membership.duration);
 
     const updatedMember = await prisma.member.update({
       where: { id: memberId },
@@ -338,12 +384,17 @@ export const renewMembership = async (req: AuthRequest, res: Response) => {
         membershipStart,
         membershipEnd,
         status: "ACTIVE",
+        updatedById: req.user?.id,
       },
-      include: {
-        user: true,
-        membership: true,
-        trainer: { include: { user: true } },
-      },
+      include: getMemberInclude,
+    });
+
+    await logActivity({
+      action: "RENEW",
+      entityType: "MEMBER",
+      entityId: updatedMember.id,
+      description: `${req.user?.email || "System"} renewed membership for ${updatedMember.user.fullName}`,
+      performedById: req.user?.id,
     });
 
     return res.json({
@@ -379,12 +430,19 @@ export const updateMemberStatus = async (req: AuthRequest, res: Response) => {
 
     const member = await prisma.member.update({
       where: { id: memberId },
-      data: { status },
-      include: {
-        user: true,
-        membership: true,
-        trainer: { include: { user: true } },
+      data: {
+        status,
+        updatedById: req.user?.id,
       },
+      include: getMemberInclude,
+    });
+
+    await logActivity({
+      action: "STATUS_UPDATE",
+      entityType: "MEMBER",
+      entityId: member.id,
+      description: `${req.user?.email || "System"} changed ${member.user.fullName}'s status to ${status}`,
+      performedById: req.user?.id,
     });
 
     return res.json({ message: "Status updated successfully", member });

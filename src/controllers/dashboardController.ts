@@ -2,6 +2,12 @@ import { Response } from "express";
 import prisma from "../config/prisma";
 import { AuthRequest } from "../middlewares/authMiddleware";
 
+const getMonthLabel = (date: Date) =>
+  date.toLocaleString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+
 export const getDashboardStats = async (
   _req: AuthRequest,
   res: Response
@@ -15,11 +21,7 @@ export const getDashboardStats = async (
     const sevenDays = new Date();
     sevenDays.setDate(today.getDate() + 7);
 
-    const firstDayOfMonth = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      1
-    );
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     const [
       totalMembers,
@@ -35,6 +37,11 @@ export const getDashboardStats = async (
       recentPayments,
       expiringMembers,
       todayCheckIns,
+      paidPayments,
+      allMembers,
+      memberships,
+      paymentStatusRows,
+      activityLogs,
     ] = await Promise.all([
       prisma.member.count(),
 
@@ -105,6 +112,13 @@ export const getDashboardStats = async (
             },
           },
           membership: true,
+          createdBy: {
+            select: {
+              fullName: true,
+              email: true,
+              role: true,
+            },
+          },
         },
       }),
 
@@ -114,6 +128,13 @@ export const getDashboardStats = async (
           createdAt: "desc",
         },
         include: {
+          collectedBy: {
+            select: {
+              fullName: true,
+              email: true,
+              role: true,
+            },
+          },
           member: {
             include: {
               user: {
@@ -171,7 +192,99 @@ export const getDashboardStats = async (
           },
         },
       }),
+
+      prisma.payment.findMany({
+        where: {
+          status: "PAID",
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          amount: true,
+          createdAt: true,
+        },
+      }),
+
+      prisma.member.findMany({
+        orderBy: {
+          joinDate: "asc",
+        },
+        select: {
+          joinDate: true,
+        },
+      }),
+
+      prisma.membership.findMany({
+        select: {
+          name: true,
+          _count: {
+            select: {
+              members: true,
+            },
+          },
+        },
+      }),
+
+      prisma.payment.groupBy({
+        by: ["status"],
+        _count: {
+          status: true,
+        },
+      }),
+
+      prisma.activityLog.findMany({
+        take: 10,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          performedBy: {
+            select: {
+              fullName: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    const revenueMap: Record<string, number> = {};
+
+    paidPayments.forEach((payment) => {
+      const month = getMonthLabel(payment.createdAt);
+      revenueMap[month] = (revenueMap[month] || 0) + payment.amount;
+    });
+
+    const revenueChart = Object.entries(revenueMap).map(([month, revenue]) => ({
+      month,
+      revenue,
+    }));
+
+    const memberGrowthMap: Record<string, number> = {};
+
+    allMembers.forEach((member) => {
+      const month = getMonthLabel(member.joinDate);
+      memberGrowthMap[month] = (memberGrowthMap[month] || 0) + 1;
+    });
+
+    const memberGrowthChart = Object.entries(memberGrowthMap).map(
+      ([month, members]) => ({
+        month,
+        members,
+      })
+    );
+
+    const membershipDistribution = memberships.map((membership) => ({
+      name: membership.name,
+      value: membership._count.members,
+    }));
+
+    const paymentStatusChart = paymentStatusRows.map((payment) => ({
+      status: payment.status,
+      count: payment._count.status,
+    }));
 
     res.json({
       totalMembers,
@@ -187,6 +300,11 @@ export const getDashboardStats = async (
       recentPayments,
       expiringMembers,
       todayCheckIns,
+      revenueChart,
+      memberGrowthChart,
+      membershipDistribution,
+      paymentStatusChart,
+      activityLogs,
     });
   } catch (error) {
     res.status(500).json({
