@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { getMe, login, register, signupMember } from "../controllers/authController";
+import {
+  getMe,
+  login,
+  register,
+  signupMember,
+  changePassword,
+  resetUserPassword,
+} from "../controllers/authController";
 import { protect } from "../middlewares/authMiddleware";
 import { authorizeRoles } from "../middlewares/roleMiddleware";
 
@@ -16,4 +23,12 @@ router.post(
   register
 );
 
+router.patch("/change-password", protect, changePassword);
+
+router.patch(
+  "/users/:id/reset-password",
+  protect,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  resetUserPassword
+);
 export default router;

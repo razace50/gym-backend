@@ -284,7 +284,7 @@ export const updateMember = async (req: AuthRequest, res: Response) => {
         address: address || null,
         membershipStart,
         membershipEnd,
-        createdBy: req.user?.id
+        updatedBy: req.user?.id
   ? { connect: { id: req.user.id } }
   : undefined,
         membership: membershipId
@@ -384,7 +384,9 @@ export const renewMembership = async (req: AuthRequest, res: Response) => {
         membershipStart,
         membershipEnd,
         status: "ACTIVE",
-        updatedById: req.user?.id,
+        updatedBy: req.user?.id
+  ? { connect: { id: req.user.id } }
+  : undefined,
       },
       include: getMemberInclude,
     });
@@ -432,7 +434,9 @@ export const updateMemberStatus = async (req: AuthRequest, res: Response) => {
       where: { id: memberId },
       data: {
         status,
-        updatedById: req.user?.id,
+        updatedBy: req.user?.id
+  ? { connect: { id: req.user.id } }
+  : undefined,
       },
       include: getMemberInclude,
     });

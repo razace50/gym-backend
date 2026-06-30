@@ -20,6 +20,7 @@ import reportRoutes from "./routes/reportRoutes";
 import workoutPlanRoutes from "./routes/workoutPlanRoutes";
 import progressRoutes from "./routes/progressRoutes";
 import expenseRoutes from "./routes/expenseRoutes";
+import activityLogRoutes from "./routes/activityLogRoutes";
 
 
 dotenv.config();
@@ -52,6 +53,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/workout-plans", workoutPlanRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/expenses", expenseRoutes);
+app.use("/api/activity-logs", activityLogRoutes);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
